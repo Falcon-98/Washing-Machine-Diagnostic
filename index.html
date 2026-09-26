@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WM Diagnostics — Washing Machine Fault Codes</title>
+<meta name="description" content="Offline washing machine error-code reference for service technicians. English and Sinhala.">
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#d32f2f" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+
+<!-- iOS home-screen support -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WM Diag">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png" sizes="64x64">
+
+<link rel="stylesheet" href="assets/app.css">
+
+<script>
+  // Applied before first paint so the app never flashes the wrong theme.
+  (function () {
+    try {
+      var s = JSON.parse(localStorage.getItem('wmd.settings') || '{}');
+      var t = s.theme || 'system';
+      var dark = t === 'dark' || (t === 'system' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', dark);
+      if (s.textSize) document.documentElement.dataset.text = s.textSize;
+      if (s.lang) document.documentElement.lang = s.lang === 'si' ? 'si' : 'en';
+    } catch (e) {}
+  })();
+</script>
+</head>
+
+<body class="min-h-full bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-200 antialiased pb-[env(safe-area-inset-bottom)]">
+
+<!-- ══════════ Optional PIN lock ══════════ -->
+<div id="pinLock" class="fixed inset-0 z-[80] hidden items-center justify-center bg-slate-900/95 p-6 backdrop-blur">
+  <div class="w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-2xl dark:bg-slate-800">
+    <div class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-brand text-2xl text-white">🔒</div>
+    <h2 class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="lock.title">Enter PIN</h2>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400" data-i18n="lock.sub">This device has a PIN set for the app.</p>
+    <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8"
+      class="mt-4 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-center text-2xl tracking-[0.5em] text-slate-900 outline-none focus:border-brand focus:ring-2 focus:ring-brand/30 dark:border-slate-600 dark:bg-slate-900 dark:text-white"
+      aria-label="PIN">
+    <p id="pinError" class="mt-2 hidden text-sm font-medium text-brand" data-i18n="lock.wrong">Wrong PIN. Try again.</p>
+    <button id="pinSubmit" class="btn-primary mt-4 w-full" data-i18n="lock.unlock">Unlock</button>
+  </div>
+</div>
+
+<!-- ══════════ Header ══════════ -->
+<header class="sticky top-0 z-40 bg-brand text-white shadow-lg pt-[env(safe-area-inset-top)]">
+  <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2.5">
+    <div class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/15" aria-hidden="true">
+      <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="4" y="3" width="16" height="18" rx="2.5"/><line x1="7" y1="6.5" x2="17" y2="6.5" stroke-linecap="round"/>
+        <circle cx="12" cy="14" r="5"/><circle cx="12" cy="14" r="2.3"/>
+      </svg>
+    </div>
+    <div class="min-w-0 flex-1">
+      <h1 class="truncate text-base font-bold leading-tight">WM Diagnostics</h1>
+      <p class="truncate text-[11px] leading-tight text-white/75" data-i18n="app.tagline">Technician fault-code reference</p>
+    </div>
+
+    <button id="langBtn" class="btn-ghost-head" aria-label="Switch language">
+      <span id="langLabel">සිං</span>
+    </button>
+    <button id="settingsBtn" class="btn-ghost-head" aria-label="Settings" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Search -->
+  <div class="mx-auto max-w-3xl px-3 pb-2.5">
+    <div class="relative">
+      <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21" stroke-linecap="round"/>
+      </svg>
+      <input id="search" type="search" enterkeyhint="search" autocomplete="off"
+        class="w-full rounded-xl border-0 bg-white py-3 pl-10 pr-10 text-[15px] text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:ring-2 focus:ring-white/70 dark:bg-slate-800 dark:text-white"
+        data-i18n-ph="search.ph" placeholder="Search code, fault or part…" aria-label="Search fault codes">
+      <button id="searchClear" class="absolute right-2 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Clear search">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/><line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Category chips -->
+  <div class="scroll-x border-t border-white/10">
+    <div id="chips" class="mx-auto flex max-w-3xl gap-2 px-3 py-2" role="tablist" aria-label="Filter by category"></div>
+  </div>
+</header>
+
+<!-- Offline banner -->
+<div id="offlineBar" class="hidden bg-amber-400 px-3 py-1.5 text-center text-[13px] font-semibold text-amber-950">
+  <span data-i18n="offline">Offline — all data is stored on this device</span>
+</div>
+
+<main class="mx-auto max-w-3xl px-3 pb-24 pt-3 space-y-3">
+
+  <!-- Install prompt -->
+  <section id="installCard" class="hidden card border-l-4 border-brand">
+    <div class="flex items-start gap-3">
+      <span class="text-2xl" aria-hidden="true">📲</span>
+      <div class="min-w-0 flex-1">
+        <h2 class="font-bold text-slate-900 dark:text-white" data-i18n="install.title">Install on this phone</h2>
+        <p class="mt-0.5 text-sm text-slate-600 dark:text-slate-400" data-i18n="install.body">Works fully offline once installed. No app store needed.</p>
+        <div class="mt-2.5 flex gap-2">
+          <button id="installBtn" class="btn-primary text-sm" data-i18n="install.cta">Install</button>
+          <button id="installDismiss" class="btn-quiet text-sm" data-i18n="install.later">Not now</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Model selector -->
+  <section class="card">
+    <label for="model" class="label" data-i18n="model.label">Machine model</label>
+    <select id="model" class="input mt-1.5"></select>
+    <p class="mt-1.5 text-xs text-slate-500 dark:text-slate-400" data-i18n="model.help">
+      Filters the code list by drum type and is added to the job report.
+    </p>
+  </section>
+
+  <!-- Pinned / recent -->
+  <section id="quickRow" class="hidden space-y-2">
+    <div id="favWrap" class="hidden">
+      <h2 class="section-label"><span data-i18n="fav.title">Pinned</span></h2>
+      <div id="favList" class="scroll-x flex gap-2 pb-1"></div>
+    </div>
+    <div id="recentWrap" class="hidden">
+      <h2 class="section-label"><span data-i18n="recent.title">Recently viewed</span></h2>
+      <div id="recentList" class="scroll-x flex gap-2 pb-1"></div>
+    </div>
+  </section>
+
+  <!-- Code grid -->
+  <section class="card">
+    <div class="mb-2 flex items-baseline justify-between gap-2">
+      <h2 class="section-label !mb-0"><span data-i18n="codes.title">Fault codes</span></h2>
+      <span id="codeCount" class="text-xs font-medium text-slate-500 dark:text-slate-400"></span>
+    </div>
+    <div id="grid" class="grid grid-cols-4 gap-2 sm:grid-cols-6"></div>
+    <p id="emptyState" class="hidden py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+      <span data-i18n="codes.empty">No codes match that search.</span>
+    </p>
+    <button id="addCodeBtn" class="btn-quiet mt-3 w-full text-sm">
+      <span data-i18n="codes.add">+ Add your own code</span>
+    </button>
+  </section>
+
+  <!-- Common faults -->
+  <section class="card">
+    <h2 class="section-label"><span data-i18n="common.title">Common faults</span></h2>
+    <div id="commonFaults" class="grid gap-2 sm:grid-cols-2"></div>
+  </section>
+
+  <!-- Checklist -->
+  <section class="card">
+    <div class="mb-1 flex items-center justify-between gap-2">
+      <h2 class="section-label !mb-0"><span data-i18n="check.title">Standard checklist</span></h2>
+      <span id="checkCount" class="text-xs font-semibold text-slate-500 dark:text-slate-400">0/6</span>
+    </div>
+    <div class="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+      <div id="checkBar" class="h-full w-0 rounded-full bg-emerald-500 transition-all duration-300"></div>
+    </div>
+    <div id="checklist" class="space-y-1"></div>
+    <button id="resetCheck" class="btn-quiet mt-3 w-full text-sm" data-i18n="check.reset">Reset for next job</button>
+  </section>
+
+  <!-- Job report -->
+  <section class="card">
+    <h2 class="section-label"><span data-i18n="job.title">Job report</span></h2>
+    <div class="grid gap-2 sm:grid-cols-2">
+      <div>
+        <label for="jobCustomer" class="label" data-i18n="job.customer">Customer / job ref</label>
+        <input id="jobCustomer" class="input mt-1" autocomplete="off" placeholder="—">
+      </div>
+      <div>
+        <label for="jobSerial" class="label" data-i18n="job.serial">Serial no.</label>
+        <input id="jobSerial" class="input mt-1" autocomplete="off" placeholder="—">
+      </div>
+    </div>
+    <label for="jobNotes" class="label mt-2 block" data-i18n="job.notes">Notes</label>
+    <textarea id="jobNotes" rows="3" class="input mt-1 resize-y" data-i18n-ph="job.notes.ph" placeholder="Parts replaced, readings taken, advice given…"></textarea>
+    <div class="mt-3 flex gap-2">
+      <button id="shareJob" class="btn-primary flex-1 text-sm" data-i18n="job.share">Share report</button>
+      <button id="clearJob" class="btn-quiet text-sm" data-i18n="job.clear">Clear</button>
+    </div>
+  </section>
+
+  <p class="px-2 pb-2 text-center text-[11px] leading-relaxed text-slate-500 dark:text-slate-500" data-i18n="disclaimer">
+    Independent technician reference tool. Not affiliated with or endorsed by any appliance
+    manufacturer. Code meanings vary between models and control boards — always confirm against
+    the manufacturer's official service manual. Mains-voltage repairs must be carried out by a
+    qualified technician.
+  </p>
+  <p class="text-center text-[11px] text-slate-400 dark:text-slate-600">v<span id="verLabel">1.0.0</span></p>
+</main>
+
+<!-- ══════════ Code detail sheet ══════════ -->
+<div id="sheetBackdrop" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm"></div>
+<section id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetCode"
+  class="fixed inset-x-0 bottom-0 z-50 hidden max-h-[88vh] translate-y-full overflow-y-auto rounded-t-3xl bg-white pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-300 dark:bg-slate-900 sm:mx-auto sm:max-w-2xl sm:rounded-3xl sm:bottom-6">
+  <div class="sticky top-0 z-10 rounded-t-3xl bg-white/95 px-4 pb-3 pt-3 backdrop-blur dark:bg-slate-900/95">
+    <div class="mx-auto mb-3 h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600" aria-hidden="true"></div>
+    <div class="flex items-start gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span id="sheetCode" class="text-2xl font-extrabold text-brand">E1</span>
+          <span id="sheetCat" class="chip-static"></span>
+          <span id="sheetCustom" class="chip-static hidden !bg-indigo-100 !text-indigo-700 dark:!bg-indigo-900/40 dark:!text-indigo-300" data-i18n="detail.custom">Custom</span>
+        </div>
+        <p id="sheetTitle" class="mt-0.5 text-[15px] font-semibold leading-snug text-slate-900 dark:text-white"></p>
+      </div>
+      <button id="sheetFav" class="icon-btn" aria-label="Pin this code" aria-pressed="false">
+        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button id="sheetClose" class="icon-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/><line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="space-y-3 px-4">
+    <div class="rounded-xl border-l-4 border-amber-500 bg-amber-50 p-3 dark:bg-amber-500/10">
+      <h3 class="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400" data-i18n="detail.cause">Cause</h3>
+      <p id="sheetDesc" class="mt-1 text-[15px] leading-relaxed text-slate-800 dark:text-slate-100"></p>
+    </div>
+
+    <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+      <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400" data-i18n="detail.checks">Check these</h3>
+      <ul id="sheetChecks" class="mt-2 space-y-1.5"></ul>
+    </div>
+
+    <div class="rounded-xl border-l-4 border-emerald-500 bg-emerald-50 p-3 dark:bg-emerald-500/10">
+      <h3 class="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400" data-i18n="detail.solution">Usual fix</h3>
+      <p id="sheetSol" class="mt-1 text-[15px] leading-relaxed text-slate-800 dark:text-slate-100"></p>
+    </div>
+
+    <div class="flex gap-2 pt-1">
+      <button id="sheetShare" class="btn-primary flex-1 text-sm" data-i18n="detail.share">Share</button>
+      <button id="sheetCopy" class="btn-quiet flex-1 text-sm" data-i18n="detail.copy">Copy</button>
+      <button id="sheetEdit" class="btn-quiet hidden text-sm" data-i18n="detail.edit">Edit</button>
+      <button id="sheetDelete" class="btn-quiet hidden !text-brand text-sm" data-i18n="detail.delete">Delete</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ Settings dialog ══════════ -->
+<div id="settingsBackdrop" class="fixed inset-0 z-[60] hidden bg-slate-900/60 backdrop-blur-sm"></div>
+<section id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"
+  class="fixed inset-x-0 bottom-0 z-[60] hidden max-h-[88vh] overflow-y-auto rounded-t-3xl bg-white pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-slate-900 sm:mx-auto sm:max-w-lg sm:rounded-3xl sm:bottom-6">
+  <div class="sticky top-0 flex items-center justify-between rounded-t-3xl bg-white/95 px-4 py-3 backdrop-blur dark:bg-slate-900/95">
+    <h2 id="settingsTitle" class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="set.title">Settings</h2>
+    <button id="settingsClose" class="icon-btn" aria-label="Close">
+      <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/><line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <div class="space-y-5 px-4 pt-1">
+    <div>
+      <h3 class="label" data-i18n="set.theme">Appearance</h3>
+      <div class="seg mt-1.5" role="group">
+        <button data-theme="system" data-i18n="set.system">System</button>
+        <button data-theme="light" data-i18n="set.light">Light</button>
+        <button data-theme="dark" data-i18n="set.dark">Dark</button>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="label" data-i18n="set.text">Text size</h3>
+      <div class="seg mt-1.5" role="group">
+        <button data-text="sm" class="text-xs">A</button>
+        <button data-text="base" class="text-sm">A</button>
+        <button data-text="lg" class="text-base">A</button>
+        <button data-text="xl" class="text-lg">A</button>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="label" data-i18n="set.lock">PIN lock</h3>
+      <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400" data-i18n="set.lock.help">
+        Keeps casual eyes off the app. It is not real security — anyone with the device can bypass it.
+      </p>
+      <div class="mt-2 flex gap-2">
+        <input id="pinSet" type="password" inputmode="numeric" maxlength="8" class="input flex-1"
+          data-i18n-ph="set.lock.ph" placeholder="4–8 digits, blank to disable" autocomplete="off">
+        <button id="pinSave" class="btn-primary text-sm" data-i18n="set.lock.save">Save</button>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="label" data-i18n="set.data">Your data</h3>
+      <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400" data-i18n="set.data.help">
+        Custom codes, pins, checklist and job notes live only on this device. Back them up before changing phones.
+      </p>
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        <button id="exportBtn" class="btn-quiet text-sm" data-i18n="set.export">Export backup</button>
+        <button id="importBtn" class="btn-quiet text-sm" data-i18n="set.import">Restore backup</button>
+      </div>
+      <input id="importFile" type="file" accept="application/json,.json" class="hidden">
+      <button id="resetAll" class="btn-quiet mt-2 w-full !text-brand text-sm" data-i18n="set.reset">Erase everything on this device</button>
+    </div>
+
+    <div class="border-t border-slate-200 pt-4 dark:border-slate-700">
+      <button id="iosHelpBtn" class="btn-quiet w-full text-sm" data-i18n="set.howinstall">How do I install this?</button>
+      <p class="mt-3 text-center text-[11px] text-slate-400 dark:text-slate-600">
+        WM Diagnostics v<span class="verLabel">1.0.0</span> · <span id="swState">—</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ Add / edit code dialog ══════════ -->
+<div id="editBackdrop" class="fixed inset-0 z-[70] hidden bg-slate-900/60 backdrop-blur-sm"></div>
+<section id="editDlg" role="dialog" aria-modal="true" aria-labelledby="editTitle"
+  class="fixed inset-x-0 bottom-0 z-[70] hidden max-h-[90vh] overflow-y-auto rounded-t-3xl bg-white pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl dark:bg-slate-900 sm:mx-auto sm:max-w-lg sm:rounded-3xl sm:bottom-6">
+  <div class="sticky top-0 flex items-center justify-between rounded-t-3xl bg-white/95 px-4 py-3 backdrop-blur dark:bg-slate-900/95">
+    <h2 id="editTitle" class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="edit.title">Add a code</h2>
+    <button id="editClose" class="icon-btn" aria-label="Close">
+      <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="6" x2="18" y2="18" stroke-linecap="round"/><line x1="18" y1="6" x2="6" y2="18" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="space-y-3 px-4">
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <label for="fCode" class="label" data-i18n="edit.code">Code</label>
+        <input id="fCode" class="input mt-1 uppercase" maxlength="8" autocomplete="off" placeholder="E99">
+      </div>
+      <div>
+        <label for="fCat" class="label" data-i18n="edit.cat">Category</label>
+        <select id="fCat" class="input mt-1"></select>
+      </div>
+    </div>
+    <div>
+      <label for="fEn" class="label" data-i18n="edit.en">Cause (English)</label>
+      <input id="fEn" class="input mt-1" autocomplete="off">
+    </div>
+    <div>
+      <label for="fSi" class="label" data-i18n="edit.si">Cause (Sinhala)</label>
+      <input id="fSi" class="input mt-1" autocomplete="off">
+    </div>
+    <div>
+      <label for="fChecks" class="label" data-i18n="edit.checks">Checks — one per line</label>
+      <textarea id="fChecks" rows="3" class="input mt-1 resize-y"></textarea>
+    </div>
+    <div>
+      <label for="fSol" class="label" data-i18n="edit.sol">Usual fix</label>
+      <textarea id="fSol" rows="2" class="input mt-1 resize-y"></textarea>
+    </div>
+    <p id="editError" class="hidden text-sm font-medium text-brand"></p>
+    <button id="editSave" class="btn-primary w-full" data-i18n="edit.save">Save code</button>
+  </div>
+</section>
+
+<!-- ══════════ iOS install help ══════════ -->
+<div id="iosBackdrop" class="fixed inset-0 z-[75] hidden bg-slate-900/70 p-5 backdrop-blur-sm">
+  <div role="dialog" aria-modal="true" class="mx-auto mt-[12vh] max-w-sm rounded-2xl bg-white p-5 shadow-2xl dark:bg-slate-800">
+    <h2 class="text-lg font-bold text-slate-900 dark:text-white" data-i18n="ios.title">Add to home screen</h2>
+    <div class="mt-3 space-y-3 text-sm text-slate-600 dark:text-slate-300">
+      <p><strong class="text-slate-900 dark:text-white" data-i18n="ios.android">Android (Chrome)</strong><br>
+        <span data-i18n="ios.androidSteps">Menu ⋮ → “Add to Home screen” or “Install app”.</span></p>
+      <p><strong class="text-slate-900 dark:text-white" data-i18n="ios.ios">iPhone / iPad (Safari)</strong><br>
+        <span data-i18n="ios.iosSteps">Share button → “Add to Home Screen”. Safari only — Chrome on iOS can't install web apps.</span></p>
+      <p class="text-xs text-slate-500 dark:text-slate-400" data-i18n="ios.note">Once installed it opens full screen and works with no signal.</p>
+    </div>
+    <button id="iosClose" class="btn-primary mt-4 w-full" data-i18n="ios.ok">Got it</button>
+  </div>
+</div>
+
+<!-- ══════════ Toast ══════════ -->
+<div id="toast" class="pointer-events-none fixed inset-x-0 bottom-0 z-[90] flex flex-col items-center gap-2 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"></div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
